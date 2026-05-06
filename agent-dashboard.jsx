@@ -1,18 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 
 const MOCK_AGENTS = [
-  { id: 1, name: "Jamie Wallace", team: "Wallace Team", ext: "2041", cell: "931-555-0147", office: "Suite 204", location: "Main Office", status: "available" },
-  { id: 2, name: "Amy Chen", team: "Wallace Team", ext: "2042", cell: "931-555-0233", office: "Suite 204", location: "Main Office", status: "busy" },
-  { id: 3, name: "Marcus Rivera", team: "Rivera Group", ext: "3010", cell: "931-555-0388", office: "Suite 301", location: "Main Office", status: "available" },
-  { id: 4, name: "Denise Okafor", team: "Rivera Group", ext: "3011", cell: "931-555-0412", office: "Suite 301", location: "Main Office", status: "out" },
-  { id: 5, name: "Travis Long", team: "Long & Associates", ext: "1050", cell: "931-555-0590", office: "Suite 105", location: "West Branch", status: "available" },
-  { id: 6, name: "Rachel Kim", team: "Long & Associates", ext: "1051", cell: "931-555-0634", office: "Suite 105", location: "West Branch", status: "available" },
-  { id: 7, name: "Carlos Mendez", team: "Mendez Realty", ext: "4020", cell: "931-555-0771", office: "Suite 402", location: "Main Office", status: "busy" },
-  { id: 8, name: "Laura Bridges", team: "Mendez Realty", ext: "4021", cell: "931-555-0819", office: "Suite 402", location: "Main Office", status: "available" },
-  { id: 9, name: "Derek Haines", team: "Independent", ext: "2060", cell: "931-555-0903", office: "Suite 206", location: "Main Office", status: "available" },
-  { id: 10, name: "Priya Sharma", team: "Independent", ext: "1070", cell: "931-555-0155", office: "Suite 107", location: "West Branch", status: "out" },
-  { id: 11, name: "Nathan Cross", team: "Wallace Team", ext: "2043", cell: "931-555-0267", office: "Suite 204", location: "Main Office", status: "available" },
-  { id: 12, name: "Monica Tran", team: "Rivera Group", ext: "3012", cell: "931-555-0445", office: "Suite 302", location: "Main Office", status: "busy" },
+  { id: 1, name: "John Wallace", team: "Wallace Team", ext: "2041", cell: "555-555-0147", office: "Suite 204", location: "Main Office", status: "available" },
+  { id: 2, name: "Amy Chen", team: "Wallace Team", ext: "2042", cell: "555-555-0233", office: "Suite 204", location: "Main Office", status: "busy" },
+  { id: 3, name: "Marcus Rivera", team: "Rivera Group", ext: "3010", cell: "555-555-0388", office: "Suite 301", location: "Main Office", status: "available" },
+  { id: 4, name: "Denise Okafor", team: "Rivera Group", ext: "3011", cell: "555-555-0412", office: "Suite 301", location: "Main Office", status: "out" },
+  { id: 5, name: "Travis Long", team: "Long & Associates", ext: "1050", cell: "555-555-0590", office: "Suite 105", location: "West Branch", status: "available" },
+  { id: 6, name: "Rachel Kim", team: "Long & Associates", ext: "1051", cell: "555-555-0634", office: "Suite 105", location: "West Branch", status: "available" },
+  { id: 7, name: "Carlos Mendez", team: "Mendez Realty", ext: "4020", cell: "555-555-0771", office: "Suite 402", location: "Main Office", status: "busy" },
+  { id: 8, name: "Laura Bridges", team: "Mendez Realty", ext: "4021", cell: "555-555-0819", office: "Suite 402", location: "Main Office", status: "available" },
+  { id: 9, name: "Derek Haines", team: "Independent", ext: "2060", cell: "555-555-0903", office: "Suite 206", location: "Main Office", status: "available" },
+  { id: 10, name: "Priya Sharma", team: "Independent", ext: "1070", cell: "555-555-0155", office: "Suite 107", location: "West Branch", status: "out" },
+  { id: 11, name: "Nathan Cross", team: "Wallace Team", ext: "2043", cell: "555-555-0267", office: "Suite 204", location: "Main Office", status: "available" },
+  { id: 12, name: "Monica Tran", team: "Rivera Group", ext: "3012", cell: "555-555-0445", office: "Suite 302", location: "Main Office", status: "busy" },
 ];
 
 const STATUS_CONFIG = {
