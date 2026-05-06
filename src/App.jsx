@@ -1,42 +1,33 @@
 import { useState, useRef, useEffect } from "react";
 
-const MOCK_AGENTS = [
-  { id: 1, name: "Jamie Wallace", team: "Wallace Team", ext: "2041", cell: "931-555-0147", office: "Suite 204", location: "Main Office", status: "available" },
-  { id: 2, name: "Amy Chen", team: "Wallace Team", ext: "2042", cell: "931-555-0233", office: "Suite 204", location: "Main Office", status: "busy" },
-  { id: 3, name: "Marcus Rivera", team: "Rivera Group", ext: "3010", cell: "931-555-0388", office: "Suite 301", location: "Main Office", status: "available" },
-  { id: 4, name: "Denise Okafor", team: "Rivera Group", ext: "3011", cell: "931-555-0412", office: "Suite 301", location: "Main Office", status: "out" },
-  { id: 5, name: "Travis Long", team: "Long & Associates", ext: "1050", cell: "931-555-0590", office: "Suite 105", location: "West Branch", status: "available" },
-  { id: 6, name: "Rachel Kim", team: "Long & Associates", ext: "1051", cell: "931-555-0634", office: "Suite 105", location: "West Branch", status: "available" },
-  { id: 7, name: "Carlos Mendez", team: "Mendez Realty", ext: "4020", cell: "931-555-0771", office: "Suite 402", location: "Main Office", status: "busy" },
-  { id: 8, name: "Laura Bridges", team: "Mendez Realty", ext: "4021", cell: "931-555-0819", office: "Suite 402", location: "Main Office", status: "available" },
-  { id: 9, name: "Derek Haines", team: "Independent", ext: "2060", cell: "931-555-0903", office: "Suite 206", location: "Main Office", status: "available" },
-  { id: 10, name: "Priya Sharma", team: "Independent", ext: "1070", cell: "931-555-0155", office: "Suite 107", location: "West Branch", status: "out" },
-  { id: 11, name: "Nathan Cross", team: "Wallace Team", ext: "2043", cell: "931-555-0267", office: "Suite 204", location: "Main Office", status: "available" },
-  { id: 12, name: "Monica Tran", team: "Rivera Group", ext: "3012", cell: "931-555-0445", office: "Suite 302", location: "Main Office", status: "busy" },
-];
+const SHEET_ID = import.meta.env.VITE_SHEET_ID;
+const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY;
+const RANGE = "Sheet1!A2:E100"; // Skip header row, columns A-E
 
-const STATUS_CONFIG = {
-  available: { label: "Available", color: "#22c55e", bg: "rgba(34,197,94,0.1)" },
-  busy: { label: "On Call", color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  out: { label: "Out", color: "#94a3b8", bg: "rgba(148,163,184,0.1)" },
-};
+async function fetchAgents() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+  const response = await fetch(url);
 
-function StatusDot({ status }) {
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 6,
-      fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
-      color: cfg.color, textTransform: "uppercase",
-      background: cfg.bg, padding: "3px 10px", borderRadius: 20,
-    }}>
-      <span style={{
-        width: 7, height: 7, borderRadius: "50%", background: cfg.color,
-        boxShadow: status === "available" ? `0 0 6px ${cfg.color}` : "none",
-      }} />
-      {cfg.label}
-    </span>
-  );
+  if (!response.ok) {
+    throw new Error(`Google Sheets API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.values || data.values.length === 0) {
+    return [];
+  }
+
+  // Map rows to agent objects
+  // Columns: A=Name, B=Cell, C=Ext, D=Location, E=Office #
+  return data.values.map((row, index) => ({
+    id: index + 1,
+    name: row[0] || "",
+    cell: row[1] || "",
+    ext: row[2] || "",
+    location: row[3] || "",
+    office: row[4] || "",
+  }));
 }
 
 function highlightMatch(text, query) {
@@ -55,7 +46,6 @@ function highlightMatch(text, query) {
 }
 
 function AgentCard({ agent, query, isSelected, onClick }) {
-  const cfg = STATUS_CONFIG[agent.status];
   return (
     <div
       onClick={onClick}
@@ -81,7 +71,6 @@ function AgentCard({ agent, query, isSelected, onClick }) {
           }}>
             {highlightMatch(agent.name, query)}
           </span>
-          <StatusDot status={agent.status} />
         </div>
         <div style={{
           fontSize: 12.5, color: "var(--text-secondary)",
@@ -93,12 +82,6 @@ function AgentCard({ agent, query, isSelected, onClick }) {
           <span>{agent.office}</span>
           <span style={{ color: "var(--border)" }}>|</span>
           <span>{agent.location}</span>
-        </div>
-        <div style={{
-          fontSize: 11.5, color: "var(--text-muted)", marginTop: 4,
-          fontFamily: "'DM Sans', sans-serif",
-        }}>
-          {highlightMatch(agent.team, query)}
         </div>
       </div>
       <a
@@ -158,12 +141,29 @@ function FilterPill({ label, active, onClick, count }) {
 }
 
 export default function AgentDashboard() {
+  const [agents, setAgents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(null);
   const inputRef = useRef(null);
 
+  // Fetch agents from Google Sheets on load
+  useEffect(() => {
+    fetchAgents()
+      .then((data) => {
+        setAgents(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch agents:", err);
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  // Keyboard shortcuts
   useEffect(() => {
     inputRef.current?.focus();
     const handler = (e) => {
@@ -181,25 +181,17 @@ export default function AgentDashboard() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const locations = [...new Set(MOCK_AGENTS.map(a => a.location))];
+  const locations = [...new Set(agents.map(a => a.location).filter(Boolean))];
 
-  const filtered = MOCK_AGENTS.filter(a => {
+  const filtered = agents.filter(a => {
     const matchesQuery = !query ||
       a.name.toLowerCase().includes(query.toLowerCase()) ||
-      a.team.toLowerCase().includes(query.toLowerCase()) ||
       a.ext.includes(query) ||
-      a.cell.includes(query);
-    const matchesStatus = statusFilter === "all" || a.status === statusFilter;
+      a.cell.includes(query) ||
+      a.office.toLowerCase().includes(query.toLowerCase());
     const matchesLocation = locationFilter === "all" || a.location === locationFilter;
-    return matchesQuery && matchesStatus && matchesLocation;
+    return matchesQuery && matchesLocation;
   });
-
-  const statusCounts = {
-    all: MOCK_AGENTS.length,
-    available: MOCK_AGENTS.filter(a => a.status === "available").length,
-    busy: MOCK_AGENTS.filter(a => a.status === "busy").length,
-    out: MOCK_AGENTS.filter(a => a.status === "out").length,
-  };
 
   return (
     <div style={{
@@ -260,14 +252,12 @@ export default function AgentDashboard() {
           </h1>
         </div>
         <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginLeft: 32 }}>
-          {statusCounts.available} available · {statusCounts.busy} on call · {statusCounts.out} out
+          {agents.length} agents loaded
         </p>
       </div>
 
       {/* Search */}
-      <div style={{
-        position: "relative", marginBottom: 14,
-      }}>
+      <div style={{ position: "relative", marginBottom: 14 }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
           style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -275,7 +265,7 @@ export default function AgentDashboard() {
         <input
           ref={inputRef}
           type="text"
-          placeholder="Search by name, team, or extension…"
+          placeholder="Search by name, extension, cell, or office…"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setSelectedId(null); }}
           style={{
@@ -302,42 +292,71 @@ export default function AgentDashboard() {
         )}
       </div>
 
-      {/* Filters */}
-      <div style={{
-        display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap",
-      }}>
-        <FilterPill label="All" count={statusCounts.all} active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
-        <FilterPill label="Available" count={statusCounts.available} active={statusFilter === "available"} onClick={() => setStatusFilter("available")} />
-        <FilterPill label="On Call" count={statusCounts.busy} active={statusFilter === "busy"} onClick={() => setStatusFilter("busy")} />
-        <FilterPill label="Out" count={statusCounts.out} active={statusFilter === "out"} onClick={() => setStatusFilter("out")} />
-        <span style={{ width: 1, background: "var(--border)", margin: "0 4px" }} />
-        <FilterPill label="All Locations" active={locationFilter === "all"} onClick={() => setLocationFilter("all")} />
-        {locations.map(loc => (
-          <FilterPill key={loc} label={loc} active={locationFilter === loc} onClick={() => setLocationFilter(loc)} />
-        ))}
-      </div>
+      {/* Location Filters */}
+      {locations.length > 1 && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+          <FilterPill label="All Locations" count={agents.length} active={locationFilter === "all"} onClick={() => setLocationFilter("all")} />
+          {locations.map(loc => (
+            <FilterPill
+              key={loc}
+              label={loc}
+              count={agents.filter(a => a.location === loc).length}
+              active={locationFilter === loc}
+              onClick={() => setLocationFilter(loc)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div style={{
+          textAlign: "center", padding: 60,
+          color: "var(--text-muted)", fontSize: 14,
+        }}>
+          Loading agents from Google Sheets…
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div style={{
+          textAlign: "center", padding: 40,
+          color: "#f87171", fontSize: 14,
+          background: "rgba(248,113,113,0.08)",
+          borderRadius: 10, border: "1px solid rgba(248,113,113,0.2)",
+        }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Failed to load agents</div>
+          <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{error}</div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
+            Check that your .env file has VITE_SHEET_ID and VITE_GOOGLE_SHEETS_API_KEY set, and that the sheet is shared as "Anyone with the link can view."
+          </div>
+        </div>
+      )}
 
       {/* Agent List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {filtered.length === 0 ? (
-          <div style={{
-            textAlign: "center", padding: 40,
-            color: "var(--text-muted)", fontSize: 14,
-          }}>
-            No agents match "{query}"
-          </div>
-        ) : (
-          filtered.map(agent => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              query={query}
-              isSelected={selectedId === agent.id}
-              onClick={() => setSelectedId(selectedId === agent.id ? null : agent.id)}
-            />
-          ))
-        )}
-      </div>
+      {!loading && !error && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {filtered.length === 0 ? (
+            <div style={{
+              textAlign: "center", padding: 40,
+              color: "var(--text-muted)", fontSize: 14,
+            }}>
+              {query ? `No agents match "${query}"` : "No agents found in the spreadsheet"}
+            </div>
+          ) : (
+            filtered.map(agent => (
+              <AgentCard
+                key={agent.id}
+                agent={agent}
+                query={query}
+                isSelected={selectedId === agent.id}
+                onClick={() => setSelectedId(selectedId === agent.id ? null : agent.id)}
+              />
+            ))
+          )}
+        </div>
+      )}
 
       {/* Footer hint */}
       <div style={{
